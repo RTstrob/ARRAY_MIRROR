@@ -9,6 +9,7 @@
 
 from typing import Any
 import numpy as np
+
 class Array:
     """Array class - representing a one-dimensional array.
         Stipulations:
@@ -38,7 +39,10 @@ class Array:
         Returns:
             None
         """
-        raise NotImplementedError('Array.__init__')
+        self._items = np.array([default_item_value] * size, dtype=object)
+        self._default_item_value = default_item_value
+        self._logical_size = size
+        self._physical_size = size
 
     @staticmethod
     def from_list(list_items: list) -> 'Array':
@@ -59,7 +63,15 @@ class Array:
         Raises:
             TypeError: if list_items is not a list.
         """
-        raise NotImplementedError('Array.from_list')
+        #input must be a list
+        if not isinstance(list_items, list):
+            raise TypeError("Input must be a list")
+        
+        new_array = Array(size=len(list_items))
+        for i, item in enumerate(list_items):
+            new_array[i] = item
+        
+        return new_array
     
     def __getitem__(self, index: int) -> Any:
         """ Bracket operator for getting an item from an Array.
@@ -78,7 +90,10 @@ class Array:
         Raises:
             IndexError: if the index is out of bounds.
         """
-        raise NotImplementedError('Array.__getitem__')
+        if index < 0 or index >= len(self._items):
+            raise IndexError('Must be in range of array.')
+        
+        return self._items[index]
 
     def __setitem__(self, index: int, data: Any) -> None:
         """ Bracket operator for setting an item in an Array.
@@ -99,7 +114,9 @@ class Array:
         Raises: 
             IndexError: if the index is out of bounds.
         """
-        raise NotImplementedError('Array.__setitem__')
+        if index < 0 or index > self._logical_size - 1:
+            raise IndexError(f'Index {index} out of bounds') 
+        self._items[index] = data
 
     def append(self, data: Any) -> None:
         """ Append an item to the end of the Array
@@ -116,7 +133,17 @@ class Array:
         Returns:
             None
         """
-        raise NotImplementedError('Array.append')
+        if self._physical_size == self._logical_size:
+            new_size = 1 if self._physical_size == 0 else self._physical_size*2
+            new_items = np.array([self._default_item_value] * new_size, dtype=object)
+
+            self._physical_size = new_size
+            for i in range(self._logical_size):
+                new_items[i] = self._items[i]
+            self._items = new_items
+
+        self._items[self._logical_size] = data
+        self._logical_size += 1
         
     def __len__(self) -> int:
         """ Length operator for getting the logical length of the Array (number of items in the Array).
@@ -129,7 +156,7 @@ class Array:
         Returns:
             length (int): the length of the Array.
         """
-        raise NotImplementedError('Array.__len__')
+        return self._logical_size
 
     def resize(self, new_size: int, default_value: Any = None) -> None:
         """ Resize an Array. Resizing to a size smaller than the current size will truncate the Array. Resizing to a larger size will append None to the end of the Array.
@@ -155,7 +182,16 @@ class Array:
         Raises:
             ValueError: if the new size is less than 0.
         """
-        raise NotImplementedError('Array.resize')
+        if new_size < 0:
+            raise ValueError()
+        
+        copy_size = new_size if new_size < self._physical_size else self._physical_size
+        new_items = np.array([self._default_item_value] * new_size, dtype=object)
+        for i in range(copy_size):
+            new_items[i] = self._items[i]
+        self._items = new_items
+
+        self._physical_size = self._logical_size = new_size
 
     def __eq__(self, other: object) -> bool:
         """ Equality operator == to check if two Arrays are equal (deep check).
@@ -172,7 +208,17 @@ class Array:
         Returns:
             is_equal (bool): true if the arrays are equal (deep check).
         """
-        raise NotImplementedError('Array.__eq__')
+        if not isinstance(other, Array):
+            raise TypeError("Input must be an array.")
+        
+        if len(self._items) != len(other._items):
+            return False
+        
+        for i in range(self._logical_size):
+            if self._items[i] != other._items[i]:
+                return False
+        return True
+
 
     def __ne__(self, other: object) -> bool:
         """ Non-Equality operator !=.
@@ -189,7 +235,16 @@ class Array:
         Returns:
             is_not_equal (bool): true if the arrays are NOT equal (deep check).
         """
-        raise NotImplementedError('Array.__ne__')
+        if not isinstance(other, Array):
+            raise TypeError("Input must be an array.")
+        
+        if len(self._items) != len(other._items):
+            return True
+        
+        for i in range(self._logical_size):
+            if self._items[i] != other._items[i]:
+                return True
+        return False
 
     def __iter__(self) -> Any:
         """ Iterator operator. Allows for iteration over the Array.
@@ -201,7 +256,8 @@ class Array:
         Yields:
             item (Any): yields the item at index
         """
-        raise NotImplementedError('Array.__iter__')
+        for i in range(self._logical_size):
+            yield self._items[i]
 
     def __reversed__(self) -> Any:
         """ Reversed iterator operator. Allows for iteration over the Array in reverse.
@@ -214,7 +270,8 @@ class Array:
         Yields:
             item (Any): yields the item at index starting at the end
         """
-        raise NotImplementedError('Array.__reversed__')
+        for i in range(self._logical_size - 1, -1, -1):
+            yield self._items[i]
 
     def __delitem__(self, index: int) -> None:
         """ Delete an item in the array. Copies the array contents from index + 1 down
@@ -235,7 +292,20 @@ class Array:
         Returns:
             None
         """
-        raise NotImplementedError('Array.__delitem__')
+        if index < 0 or index >= self._logical_size:
+            raise IndexError("Index out of range")
+        
+        new_items = np.array([self._default_item_value] * (self._logical_size - 1), dtype=object)
+        
+        for i in range(0, index):
+            new_items[i] = self._items[i]
+
+        for i in range(index, self._logical_size - 1):
+            new_items[i] = self._items[i + 1]
+        self._items = new_items
+
+        self._logical_size -= 1
+        self._physical_size = self._logical_size
 
     def __contains__(self, item: Any) -> bool:
         """ Contains operator (in). Checks if the array contains the item.
@@ -252,7 +322,10 @@ class Array:
         Returns:
             contains_item (bool): true if the array contains the item.
         """
-        raise NotImplementedError('Array.__contains__')
+        for i in range(self._logical_size):
+            if self._items[i] == item:
+                return True
+        return False
     
     def __does_not_contain__(self, item: Any) -> bool:
         """ Does not contain operator (not in)
@@ -269,7 +342,10 @@ class Array:
         Returns:
             does_not_contains_item (bool): true if the array does not contain the item.
         """ 
-        raise NotImplementedError('Array.__does_not_contain__') 
+        for i in range(self._logical_size):
+            if self._items[i] == item:
+                return False
+        return True
 
     def clear(self) -> None:
         """ Clear the Array
@@ -286,7 +362,9 @@ class Array:
         Returns:
             None
         """
-        raise NotImplementedError('Array.clear')
+        self._items = []
+        self._physical_size = 0
+        self._logical_size = 0 
 
     def __str__(self) -> str:
         """ Return a string representation of the data and structure. 
@@ -300,7 +378,7 @@ class Array:
         Returns:
             string (str): the string representation of the data and structure.
         """
-        raise NotImplementedError('Array.__str__')
+        return str(self._items[:self._logical_size])
     
     def __repr__(self) -> str:
         """ Return a string representation of the data and structure.
@@ -314,4 +392,4 @@ class Array:
         Returns:
             string (str): the string representation of the data and structure.
         """
-        raise NotImplementedError('Array.__repr__')
+        return self.__str__()
