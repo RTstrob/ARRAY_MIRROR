@@ -393,3 +393,4 @@ class Array:
             string (str): the string representation of the data and structure.
         """
         return self.__str__()
+
